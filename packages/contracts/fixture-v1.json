@@ -1,0 +1,50 @@
+[
+  {
+    "scenario": "normal",
+    "receipt_seconds": 0,
+    "event_seconds": 0,
+    "amount_minor": 10000,
+    "device": "a",
+    "label": 0
+  },
+  {
+    "scenario": "ambiguous",
+    "receipt_seconds": 600,
+    "event_seconds": 600,
+    "amount_minor": 30000,
+    "device": "b",
+    "label": 0
+  },
+  {
+    "scenario": "burst",
+    "receipt_seconds": 600,
+    "event_seconds": 20,
+    "amount_minor": 200,
+    "device": "a",
+    "label": 1
+  },
+  {
+    "scenario": "missing",
+    "receipt_seconds": 599,
+    "event_seconds": 601,
+    "amount_minor": 100,
+    "device": null,
+    "label": 0
+  },
+  {
+    "scenario": "boundary",
+    "receipt_seconds": 86400,
+    "event_seconds": 86400,
+    "amount_minor": 400,
+    "device": "c",
+    "label": 0
+  },
+  {
+    "scenario": "expired",
+    "receipt_seconds": 87001,
+    "event_seconds": 87001,
+    "amount_minor": 500,
+    "device": "a",
+    "label": 0
+  }
+]

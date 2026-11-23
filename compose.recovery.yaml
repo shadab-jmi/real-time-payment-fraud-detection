@@ -1,0 +1,24 @@
+# Host-only disposable project. All runtime networks are internal and publish no ports.
+x-drill-image: &image payment-fraud-backend:local
+services:
+  tools:
+    image: *image
+  worker:
+    image: *image
+    environment:
+      PAYMENT_RECOVERY_DRILL: isolated
+  relay:
+    image: *image
+    environment:
+      PAYMENT_RECOVERY_DRILL: isolated
+  api:
+    image: *image
+    ports: !reset []
+    networks: !override [default]
+  web:
+    image: payment-fraud-web:latest
+    ports: !reset []
+    networks: !override [default]
+  grafana:
+    ports: !reset []
+    networks: !override [default]

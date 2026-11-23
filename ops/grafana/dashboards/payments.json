@@ -1,0 +1,252 @@
+{
+  "uid": "payments-local",
+  "title": "Payment operations",
+  "schemaVersion": 40,
+  "refresh": "5s",
+  "timezone": "browser",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Receipt and decision throughput",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "local-prom"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(accepted_total[1m]))",
+          "legendFormat": "Accepted"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(decisions_total[1m]))",
+          "legendFormat": "Decided"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Receipt-to-decision latency",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "local-prom"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.5,sum(rate(receipt_to_decision_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95,sum(rate(receipt_to_decision_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99,sum(rate(receipt_to_decision_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Decisions by action",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "local-prom"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 7,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by(action)(rate(decisions_total[1m]))",
+          "legendFormat": "{{action}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Kafka consumer lag",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "local-prom"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 7,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "consumer_lag{job=\"worker\"}",
+          "legendFormat": "Partition {{partition}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Unpublished events",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "local-prom"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "outbox_pending{job=\"relay\"}",
+          "legendFormat": "Pending"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Oldest unpublished event",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "local-prom"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 14,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "outbox_oldest_seconds{job=\"relay\"}",
+          "legendFormat": "Age"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "SQL history fallbacks",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "local-prom"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "increase(redis_fallback_total{job=\"worker\"}[1m])",
+          "legendFormat": "Fallbacks / min"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Quarantined deliveries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "local-prom"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 21,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "dlq_total{job=\"worker\"}",
+          "legendFormat": "Quarantined"
+        }
+      ]
+    }
+  ]
+}

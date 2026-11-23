@@ -1,0 +1,34 @@
+rule_files: [alerts.yml]
+evaluation_interval: 5s
+tests:
+  - interval: 5s
+    input_series:
+      - series: 'up{job="worker"}'
+        values: '0x18'
+      - series: 'dlq_total{job="worker"}'
+        values: '0 0 1x16'
+    alert_rule_test:
+      - eval_time: 55s
+        alertname: ScoringWorkerDown
+        exp_alerts: []
+      - eval_time: 65s
+        alertname: ScoringWorkerDown
+        exp_alerts:
+          - exp_labels: {job: worker}
+      - eval_time: 20s
+        alertname: NewQuarantine
+        exp_alerts:
+          - exp_labels: {job: worker}
+  - interval: 5s
+    input_series:
+      - series: 'outbox_oldest_seconds{job="relay"}'
+        values: '31x40'
+      - series: 'accepted_total{job="api"}'
+        values: '0+5x40'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: OldUnpublishedEvent
+        exp_alerts: []
+      - eval_time: 2m20s
+        alertname: OldUnpublishedEvent
+        exp_alerts: [{}]

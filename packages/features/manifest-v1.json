@@ -1,0 +1,98 @@
+[
+  {
+    "name": "log_amount",
+    "type": "float64",
+    "unit": "log(INR)",
+    "transformation": "log1p(amount_minor / 100)",
+    "default": 0,
+    "missing_rule": "required inputs; empty history contributes zero"
+  },
+  {
+    "name": "cross_border",
+    "type": "float64",
+    "unit": "flag",
+    "transformation": "account_country != merchant_country",
+    "default": 0,
+    "missing_rule": "required inputs; empty history contributes zero"
+  },
+  {
+    "name": "channel_web",
+    "type": "float64",
+    "unit": "flag",
+    "transformation": "channel == web",
+    "default": 0,
+    "missing_rule": "required inputs; empty history contributes zero"
+  },
+  {
+    "name": "channel_app",
+    "type": "float64",
+    "unit": "flag",
+    "transformation": "channel == app",
+    "default": 0,
+    "missing_rule": "required inputs; empty history contributes zero"
+  },
+  {
+    "name": "channel_pos",
+    "type": "float64",
+    "unit": "flag",
+    "transformation": "channel == pos",
+    "default": 0,
+    "missing_rule": "required inputs; empty history contributes zero"
+  },
+  {
+    "name": "hour_sin",
+    "type": "float64",
+    "unit": "unitless",
+    "transformation": "sin(2*pi*UTC hour/24)",
+    "default": 0,
+    "missing_rule": "required inputs; empty history contributes zero"
+  },
+  {
+    "name": "hour_cos",
+    "type": "float64",
+    "unit": "unitless",
+    "transformation": "cos(2*pi*UTC hour/24)",
+    "default": 0,
+    "missing_rule": "required inputs; empty history contributes zero"
+  },
+  {
+    "name": "device_missing",
+    "type": "float64",
+    "unit": "flag",
+    "transformation": "device_id is null",
+    "default": 0,
+    "missing_rule": "1 for null device"
+  },
+  {
+    "name": "prior_count_10m",
+    "type": "float64",
+    "unit": "attempts",
+    "transformation": "count prior accepted within inclusive 10m",
+    "default": 0,
+    "missing_rule": "required inputs; empty history contributes zero"
+  },
+  {
+    "name": "prior_spend_10m",
+    "type": "float64",
+    "unit": "INR",
+    "transformation": "sum prior amount_minor within inclusive 10m / 100",
+    "default": 0,
+    "missing_rule": "required inputs; empty history contributes zero"
+  },
+  {
+    "name": "distinct_devices_24h",
+    "type": "float64",
+    "unit": "devices",
+    "transformation": "count distinct non-null prior devices within inclusive 24h",
+    "default": 0,
+    "missing_rule": "required inputs; empty history contributes zero"
+  },
+  {
+    "name": "new_device",
+    "type": "float64",
+    "unit": "flag",
+    "transformation": "known current device absent from prior 24h",
+    "default": 0,
+    "missing_rule": "0 for null device"
+  }
+]

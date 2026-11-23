@@ -1,0 +1,174 @@
+x-runtime: &runtime
+  build:
+    context: .
+    dockerfile: ops/tools.Dockerfile
+  image: ${COMPOSE_PROJECT_NAME:-payment-fraud}-backend:local
+  restart: unless-stopped
+x-db-env: &db-env
+  PGHOST: db
+  PGDATABASE: payments
+  PGUSER: fraud_runtime
+  PGPASSWORD: ${DB_RUNTIME_PASSWORD:?run init}
+services:
+  db:
+    command: [postgres, -c, track_commit_timestamp=on]
+    image: postgres:17.6-bookworm@sha256:f3bd19c606e442c3d7bdfa8002e03fe260a1023351e0ea4598032022b68dd6e3
+    environment:
+      POSTGRES_DB: payments
+      POSTGRES_PASSWORD: ${DB_ADMIN_PASSWORD:?run init}
+      DB_MIGRATOR_PASSWORD: ${DB_MIGRATOR_PASSWORD:?run init}
+      DB_RUNTIME_PASSWORD: ${DB_RUNTIME_PASSWORD:?run init}
+      DB_READER_PASSWORD: ${DB_READER_PASSWORD:?run init}
+    volumes:
+      - sql-data:/var/lib/postgresql/data
+      - ./ops/db-init.sh:/docker-entrypoint-initdb.d/10-roles.sh:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "payments"]
+      interval: 5s
+      timeout: 4s
+      retries: 30
+  redis:
+    image: redis:7.4.5-bookworm@sha256:90e7a336d044f1abc9e9dbc05d65566850896d11453bbd1dd0fb7e5059f0e8fb
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?run init}
+    entrypoint: ["/bin/sh", "/config/redis-start.sh"]
+    volumes:
+      - redis-data:/data
+      - ./ops/redis-start.sh:/config/redis-start.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=$$REDIS_PASSWORD redis-cli --user health ping | grep -qx PONG"]
+      interval: 5s
+      timeout: 4s
+      retries: 30
+  kafka:
+    image: apache/kafka:4.1.0@sha256:bff074a5d0051dbc0bbbcd25b045bb1fe84833ec0d3c7c965d1797dd289ec88f
+    environment:
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: INTERNAL://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_HEAP_OPTS: -Xms256m -Xmx512m
+    volumes:
+      - broker-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "/opt/kafka/bin/kafka-topics.sh", "--bootstrap-server", "kafka:9092", "--list"]
+      interval: 15s
+      timeout: 10s
+      retries: 15
+      start_period: 20s
+  tools:
+    image: ${COMPOSE_PROJECT_NAME:-payment-fraud}-backend:local
+    volumes:
+      - model-data:/artifacts
+      - credentials:/credentials
+      - ./.local/release:/evidence
+    profiles: [tools]
+    build:
+      context: .
+      dockerfile: ops/tools.Dockerfile
+    environment:
+      PGHOST: db
+      PGDATABASE: payments
+      READER_PASSWORD: ${DB_READER_PASSWORD:?run init}
+      PGUSER: fraud_migrator
+      WEB_PORT: ${WEB_PORT:-3000}
+      PGPASSWORD: ${DB_MIGRATOR_PASSWORD:?run init}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SIMULATOR_TOKEN: ${SIMULATOR_TOKEN:?run init}
+  api:
+    <<: *runtime
+    entrypoint: [python,-m,uvicorn,apps.api.main:app,--host,0.0.0.0,--port,"8000",--no-access-log]
+    ports: ["127.0.0.1:${API_PORT:-8000}:8000"]
+    networks: [default, frontend]
+    environment:
+      <<: *db-env
+      WEB_PORT: ${WEB_PORT:-3000}
+      SIMULATOR_TOKEN: ${SIMULATOR_TOKEN:?run init}
+    healthcheck:
+      test: ["CMD","python","-c","import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready',timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  prometheus:
+    profiles: [observe]
+    image: prom/prometheus:v3.5.0
+    volumes:
+      - ./ops/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./ops/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - metrics-data:/prometheus
+    healthcheck:
+      test: ["CMD","wget","-q","-O","/dev/null","http://localhost:9090/-/ready"]
+      interval: 5s
+      timeout: 4s
+      retries: 20
+  grafana:
+    profiles: [observe]
+    image: grafana/grafana:12.1.1
+    entrypoint: ["/bin/sh","/config/start.sh"]
+    networks: [default, frontend]
+    ports: ["127.0.0.1:${GRAFANA_PORT:-3001}:3000"]
+    environment:
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_PLUGINS_PREINSTALL_DISABLED: "true"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./ops/grafana/start.sh:/config/start.sh:ro
+      - ./ops/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./ops/grafana/dashboards:/etc/grafana/dashboards:ro
+    healthcheck:
+      test: ["CMD","wget","-q","-O","/dev/null","http://127.0.0.1:3000/api/health"]
+      interval: 5s
+      timeout: 4s
+      retries: 30
+  web:
+    build: ./apps/web
+    ports: ["127.0.0.1:${WEB_PORT:-3000}:8080"]
+    networks: [default, frontend]
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD","wget","-q","-O","/dev/null","http://127.0.0.1:8080/health/ready"]
+      interval: 5s
+      timeout: 4s
+      retries: 20
+  relay:
+    <<: *runtime
+    entrypoint: [python,-m,apps.relay.main]
+    environment: *db-env
+    healthcheck: &pulse
+      test: ["CMD","python","-c","import os,time; assert time.time()-os.stat('/tmp/ready').st_mtime<25"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  worker:
+    <<: *runtime
+    entrypoint: [python,-m,apps.worker.main]
+    volumes: [model-data:/artifacts:ro]
+    environment:
+      <<: *db-env
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?run init}
+    healthcheck: *pulse
+networks:
+  frontend: {}
+  default:
+    internal: true
+volumes:
+  grafana-data:
+  metrics-data:
+  sql-data:
+  redis-data:
+  broker-data:
+  model-data:
+  credentials:

@@ -1,0 +1,237 @@
+[
+  {
+    "table_name": "v_case_evidence_v1",
+    "column_name": "case_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "v_case_evidence_v1",
+    "column_name": "relation",
+    "data_type": "text"
+  },
+  {
+    "table_name": "v_case_evidence_v1",
+    "column_name": "transaction_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "v_case_evidence_v1",
+    "column_name": "run_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "v_case_evidence_v1",
+    "column_name": "account_id",
+    "data_type": "text"
+  },
+  {
+    "table_name": "v_case_evidence_v1",
+    "column_name": "device_id",
+    "data_type": "text"
+  },
+  {
+    "table_name": "v_case_evidence_v1",
+    "column_name": "merchant_id",
+    "data_type": "text"
+  },
+  {
+    "table_name": "v_case_evidence_v1",
+    "column_name": "amount_minor",
+    "data_type": "bigint"
+  },
+  {
+    "table_name": "v_case_evidence_v1",
+    "column_name": "currency",
+    "data_type": "text"
+  },
+  {
+    "table_name": "v_case_evidence_v1",
+    "column_name": "event_time",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "v_case_evidence_v1",
+    "column_name": "received_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "v_case_evidence_v1",
+    "column_name": "accepted_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "v_case_evidence_v1",
+    "column_name": "decision_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "v_case_evidence_v1",
+    "column_name": "action",
+    "data_type": "text"
+  },
+  {
+    "table_name": "v_case_evidence_v1",
+    "column_name": "score",
+    "data_type": "double precision"
+  },
+  {
+    "table_name": "v_case_evidence_v1",
+    "column_name": "policy_version",
+    "data_type": "text"
+  },
+  {
+    "table_name": "v_case_evidence_v1",
+    "column_name": "snapshot_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "v_case_evidence_v1",
+    "column_name": "history_through_seq",
+    "data_type": "bigint"
+  },
+  {
+    "table_name": "v_case_evidence_v1",
+    "column_name": "feature_values",
+    "data_type": "jsonb"
+  },
+  {
+    "table_name": "v_case_evidence_v1",
+    "column_name": "model_version_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "v_case_evidence_v1",
+    "column_name": "model_version",
+    "data_type": "text"
+  },
+  {
+    "table_name": "v_case_evidence_v1",
+    "column_name": "artifact_sha256",
+    "data_type": "text"
+  },
+  {
+    "table_name": "v_case_evidence_v1",
+    "column_name": "review_threshold",
+    "data_type": "double precision"
+  },
+  {
+    "table_name": "v_case_evidence_v1",
+    "column_name": "block_threshold",
+    "data_type": "double precision"
+  },
+  {
+    "table_name": "v_case_evidence_v1",
+    "column_name": "schema_id",
+    "data_type": "text"
+  },
+  {
+    "table_name": "v_case_evidence_v1",
+    "column_name": "ordered_manifest",
+    "data_type": "jsonb"
+  },
+  {
+    "table_name": "v_case_notes_v1",
+    "column_name": "note_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "v_case_notes_v1",
+    "column_name": "case_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "v_case_notes_v1",
+    "column_name": "author_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "v_case_notes_v1",
+    "column_name": "body",
+    "data_type": "text"
+  },
+  {
+    "table_name": "v_case_notes_v1",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "v_case_notes_v1",
+    "column_name": "supersedes_note_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "v_decision_contributions_v1",
+    "column_name": "decision_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "v_decision_contributions_v1",
+    "column_name": "transaction_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "v_decision_contributions_v1",
+    "column_name": "feature_index",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "v_decision_contributions_v1",
+    "column_name": "feature_name",
+    "data_type": "text"
+  },
+  {
+    "table_name": "v_decision_contributions_v1",
+    "column_name": "feature_value",
+    "data_type": "double precision"
+  },
+  {
+    "table_name": "v_decision_contributions_v1",
+    "column_name": "signed_value",
+    "data_type": "double precision"
+  },
+  {
+    "table_name": "v_decision_contributions_v1",
+    "column_name": "bias",
+    "data_type": "double precision"
+  },
+  {
+    "table_name": "v_decision_contributions_v1",
+    "column_name": "raw_margin",
+    "data_type": "double precision"
+  },
+  {
+    "table_name": "v_decision_contributions_v1",
+    "column_name": "method",
+    "data_type": "text"
+  },
+  {
+    "table_name": "v_decision_contributions_v1",
+    "column_name": "output_space",
+    "data_type": "text"
+  },
+  {
+    "table_name": "v_entity_edges_v1",
+    "column_name": "entity_type",
+    "data_type": "text"
+  },
+  {
+    "table_name": "v_entity_edges_v1",
+    "column_name": "entity_id",
+    "data_type": "text"
+  },
+  {
+    "table_name": "v_entity_edges_v1",
+    "column_name": "transaction_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "v_entity_edges_v1",
+    "column_name": "observed_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "v_entity_edges_v1",
+    "column_name": "source_transaction_id",
+    "data_type": "uuid"
+  }
+]

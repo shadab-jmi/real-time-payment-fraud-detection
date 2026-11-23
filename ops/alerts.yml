@@ -1,0 +1,11 @@
+groups:
+  - name: payments
+    rules:
+      - alert: ScoringWorkerDown
+        expr: up{job="worker"} == 0
+        for: 60s
+      - alert: NewQuarantine
+        expr: increase(dlq_total{job="worker"}[5m]) > 0
+      - alert: OldUnpublishedEvent
+        expr: max(outbox_oldest_seconds) > 30 and sum(rate(accepted_total[2m])) > 0
+        for: 2m
