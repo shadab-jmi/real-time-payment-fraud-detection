@@ -6,7 +6,7 @@ from collections import deque
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from apps.api import access, workspace
+from apps.api import access, workspace, simulations
 
 from fastapi import FastAPI, Depends, Header, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -24,8 +24,10 @@ app = FastAPI()
 
 @app.on_event("startup")
 def start_metrics():
+    simulations.recover()
     metrics.serve()
 requests = deque()
+app.include_router(simulations.router)
 app.include_router(access.router)
 app.include_router(workspace.router)
 
@@ -120,6 +122,10 @@ def ingest(payment: PaymentRequestV1, x_simulated_at: datetime | None = Header(N
 
 @app.get("/v1/transactions/{tx}")
 def detail(tx: UUID, reader=Depends(access.detail_reader)):
+    return payment_evidence(tx)
+
+
+def payment_evidence(tx: UUID):
     with engine.connect() as conn:
         row = query(conn,"""SELECT t.id AS transaction_id,t.received_at,t.amount_minor,t.currency,t.account_seq,t.account_id,t.merchant_id,t.device_id,t.channel,t.event_time,t.run_id,
             d.id AS decision_id,d.action,d.score,d.model_version_id,m.version AS model_version,m.review_threshold,m.block_threshold,

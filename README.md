@@ -1,27 +1,25 @@
 # Real-Time Payment Fraud Detection Platform
 
-A local fraud investigation workspace for synthetic payments. Follow a payment from receipt to a model decision, inspect the features behind its score, and track an analyst's response to a flagged transaction.
+Generate synthetic INR payments in a browser, watch a real XGBoost model score them, and investigate flagged transactions in an analyst workspace. Each decision retains its feature snapshot, model version, thresholds and signed SHAP contributions.
 
-![Payment volume and decision breakdown in the analyst workspace](docs/screenshots/desktop-overview.png)
+![Simulation workspace with a completed synthetic payment stream](docs/screenshots/simulation.png)
 
-## Features
+## Explore the workspace
 
-- Generate repeatable synthetic payments and watch approvals, reviews and blocks appear in the Transactions screen.
-- Inspect the feature snapshot, model version, thresholds and signed contributions stored with each decision.
-- Browse cases as a viewer. As an analyst, take ownership, record notes and resolve a case with an audit trail.
-- Track receipt throughput, scoring latency, consumer lag and quarantine activity in Grafana.
+- **Simulation** starts and stops a stream, tracks accepted and processed counts, and links each receipt to its decision. **Mixed** samples mostly everyday payments with occasional higher-risk patterns. **Showcase** starts with six preset examples and a cross-border web payment on a new device, then continues with Mixed traffic.
+- **Transactions** exposes the fraud score, classification thresholds and the features that increased or decreased model log-odds. Expand technical details for exact inputs, contributions, bias and raw margin.
+- **Cases** opens investigations for reviews and blocks. Viewers have read access. Analysts can take ownership, add notes and resolve cases with an audit trail.
+- **Overview and Grafana** show payment activity, case queues, decision latency, consumer lag and quarantine activity. [Overview](docs/screenshots/desktop-overview.png) · [Mobile case detail](docs/screenshots/mobile-case.png) · [Grafana dashboard](docs/screenshots/dashboard.png)
 
-## Architecture and stack
+## Architecture
 
-The Python simulator sends payments to FastAPI. PostgreSQL commits each receipt with an outbox entry. A relay publishes it to Kafka. The worker retrieves account history from Redis or PostgreSQL, computes the versioned features, and scores the payment with XGBoost. It commits the decision, explanation and any case to PostgreSQL before advancing the consumer offset.
+The React and TypeScript client reaches FastAPI through Nginx. The browser simulator and CLI share a Python generator. PostgreSQL records a receipt and an outbox event in one transaction. A relay publishes that event to Kafka. The worker reads account history from Redis with a PostgreSQL fallback, computes 12 versioned features, runs XGBoost inference, and commits the decision and explanation before advancing its Kafka offset. Replay protection prevents duplicate decisions. Prometheus and Grafana provide monitoring. Docker Compose runs the nine services locally.
 
-The React and TypeScript client reaches the API through Nginx. Prometheus collects service metrics for Grafana. Docker Compose runs the stack locally.
+## Run locally
 
-## First-time setup
+Use Docker Desktop with Linux containers and PowerShell. From the repository root, initialize a fresh installation:
 
-Start Docker Desktop with Linux containers enabled. In PowerShell, from the repository root, run the commands below. The first build requires internet access. Initialization creates private local credentials. Training creates a checksummed booster and manifest in the model volume and registers the active version in PostgreSQL.
-
-~~~powershell
+```powershell
 .\scripts\init.ps1
 docker compose build tools web
 docker compose --profile observe pull db redis kafka prometheus grafana
@@ -31,40 +29,38 @@ docker compose run --rm tools topics
 docker compose run --rm tools seed-users
 docker compose run --rm tools train --seed 42 --rows 100000
 docker compose --profile observe up -d --no-build --wait api relay worker web prometheus grafana
-docker compose --profile observe ps
-~~~
+```
 
-Open [Payment Monitor](http://127.0.0.1:3000). Retrieve the generated viewer and analyst logins privately:
+Open [Simulation](http://127.0.0.1:3000/simulation), choose **Showcase**, request 20 payments at 2 per second, and select **Start simulation**. Click a transaction to inspect its score. Stop ends generation while accepted receipts finish processing.
 
-~~~powershell
-docker compose run --rm --entrypoint cat tools /credentials/local-users.json
-~~~
+Guests and viewers can request up to 200 payments at 1–10 per second, with six starts per ten minutes per browser or client address. Analysts can request up to 200 per second and one hour of scheduled traffic. These are configuration limits. Actual throughput depends on the host. One web run can be active at a time.
 
-Open [Grafana](http://127.0.0.1:3001/d/payments-local/payment-operations) as admin. Retrieve its password with `docker compose exec -T grafana cat /var/lib/grafana/admin-password`. Keep credentials out of screenshots and commits.
+For viewer or analyst access, read the generated logins privately with `docker compose run --rm --entrypoint cat tools /credentials/local-users.json`. [Grafana](http://127.0.0.1:3001/d/payments-local/payment-operations) uses its own admin password, available through `docker compose exec -T grafana cat /var/lib/grafana/admin-password`.
 
-## Run a simulation
+For an existing installation, reuse its private environment file and Compose project name. After updating the source, rebuild and migrate before restarting:
 
-Open **Transactions**, then run the showcase in a second PowerShell window:
+```powershell
+docker compose build tools web
+docker compose up -d --wait db redis kafka
+docker compose run --rm tools migrate
+docker compose --profile observe up -d --no-build --wait api relay worker web prometheus grafana
+```
 
-~~~powershell
-docker compose run --rm tools simulate --scenario showcase --count 200 --rate 2 --seed 42
-~~~
+## Verified results
 
-The simulator submits approximately two payments per second. Pick a new seed for another batch. Select a transaction to inspect its decision. Open **Cases** for payments sent to review or blocked. Copy the run ID printed by the simulator and substitute it below to compare accepted, decided, pending and failed totals.
+Two 20-second local tests measured receipt-to-decision-commit latency using synthetic payments. All 400 payments received decisions.
 
-~~~powershell
-docker compose run --rm tools reconcile --run-id <run-id>
-~~~
+| Offered rate | Decisions | Measured decisions/s | Mean latency | p95 latency |
+| --- | ---: | ---: | ---: | ---: |
+| 5/s | 100/100 | 5.03 | 80.8 ms | 129.9 ms |
+| 15/s | 300/300 | 15.00 | 81.1 ms | 123.6 ms |
 
-[Mobile case detail](docs/screenshots/mobile-case.png) · [Operations dashboard](docs/screenshots/dashboard.png)
+On a chronological synthetic holdout of 15,000 payments, average precision was **0.496** against **0.0188** fraud prevalence, and ROC-AUC was **0.931**. Reviews and blocks caught 209 of 282 positives. Block precision was **72.9%** (51 of 70), below the 80% target.
 
-## Operations and validation
-
-After a restart, run `docker compose --profile observe up -d --wait db redis kafka api relay worker web prometheus grafana`. Stop with `docker compose --profile observe down` to retain the named volumes. Use the same private environment file and Compose project name when resuming an installation.
-
-Run `docker compose run --rm tools check model` to verify scoring parity and artifact integrity. Run `.\scripts\recovery.ps1` for the isolated crash and outage tests, then `.\scripts\benchmark.ps1` separately for the load test. A prior local benchmark accepted and decided 2,400 synthetic payments at 20 per second with 718 ms p95 receipt-to-commit latency.
+To reproduce functional checks, run `docker compose run --rm tools check model` and `docker compose run --rm tools check pipeline`. The pipeline test checks live scoring, evidence parity and Kafka replay. For a repeatable CLI demo, run `docker compose run --rm tools simulate --scenario showcase --count 20 --rate 2 --seed 42`.
 
 ## Roadmap
 
-- Evaluate model performance on additional time periods and monitor changes in review workload and block precision.
-- Prepare a hosted viewer demonstration with HTTPS and deployment-specific origin settings.
+**Project 2 — Agentic Fraud Investigation Copilot** will build on the four read-only evidence views for case evidence, entity relationships, analyst notes and decision contributions. The [view schemas](docs/release/view-schemas.json), [synthetic fixture](docs/release/copilot-fixture.json) and [HTTP API contract](docs/openapi-v1.json) provide the integration boundary.
+
+Public hosting remains future work. The current configuration targets localhost and a single API process. A hosted demo needs HTTPS, deployment-specific origin and cookie settings, and trusted proxy handling for client rate limits.

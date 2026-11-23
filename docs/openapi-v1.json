@@ -5,6 +5,180 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/v1/simulations": {
+      "get": {
+        "summary": "History",
+        "operationId": "history_v1_simulations_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Start",
+        "operationId": "start_v1_simulations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Config"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/simulations/{run}/stop": {
+      "post": {
+        "summary": "Stop",
+        "operationId": "stop_v1_simulations__run__stop_post",
+        "parameters": [
+          {
+            "name": "run",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/simulations/{run}": {
+      "get": {
+        "summary": "Monitor",
+        "operationId": "monitor_v1_simulations__run__get",
+        "parameters": [
+          {
+            "name": "run",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/simulations/{run}/transactions/{tx}": {
+      "get": {
+        "summary": "Evidence",
+        "operationId": "evidence_v1_simulations__run__transactions__tx__get",
+        "parameters": [
+          {
+            "name": "run",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run"
+            }
+          },
+          {
+            "name": "tx",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Tx"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/session": {
       "post": {
         "summary": "Login",
@@ -726,6 +900,37 @@
   },
   "components": {
     "schemas": {
+      "Config": {
+        "properties": {
+          "scenario": {
+            "type": "string",
+            "enum": [
+              "mixed",
+              "showcase"
+            ],
+            "title": "Scenario"
+          },
+          "count": {
+            "type": "integer",
+            "maximum": 720000.0,
+            "minimum": 1.0,
+            "title": "Count"
+          },
+          "rate": {
+            "type": "integer",
+            "maximum": 200.0,
+            "minimum": 1.0,
+            "title": "Rate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scenario",
+          "count",
+          "rate"
+        ],
+        "title": "Config"
+      },
       "Edit": {
         "properties": {
           "expected_version": {

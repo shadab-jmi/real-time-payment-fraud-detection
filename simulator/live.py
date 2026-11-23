@@ -58,9 +58,9 @@ def simulate(seed,count,rate):
     return submit(generate(seed,count,"demo"),seed,VERSION,rate)
 
 
-def showcase(seed, count, rate):
+def showcase_records(seed, count):
     from simulator.dataset import fixture
-    if count < 7 or rate < 0:
+    if count < 7:
         raise ValueError("Showcase requires at least seven attempts and nonnegative pacing")
     run=uuid5(NAMESPACE_URL,f"showcase-v1/{seed}/{count}")
     examples=list(fixture(seed))
@@ -75,4 +75,10 @@ def showcase(seed, count, rate):
                     merchant_country="GB",account_country="IN",amount_minor=100000,channel="web",
                     event_time=clock.replace(hour=0))
             yield clock,p.model_copy(update={**fields,"transaction_id":uuid5(run,str(i)),"run_id":run}),truth
-    return submit(records(),seed,"showcase-v1",rate)
+    return records()
+
+
+def showcase(seed, count, rate):
+    if rate < 0:
+        raise ValueError("Expected nonnegative pacing")
+    return submit(showcase_records(seed,count),seed,"showcase-v1",rate)

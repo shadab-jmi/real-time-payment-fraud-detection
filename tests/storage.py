@@ -52,7 +52,7 @@ def check_upgrade(conn):
                  {**p, "event": event})
     conn.execute(text("INSERT INTO outbox(event_id,topic,key) VALUES (:event,'payments.received.v1',:account)"),
                  {**p, "event": event})
-    require(upgrade(conn) == "0003_delivery", "populated previous revision upgraded to head")
+    require(upgrade(conn) == "0004_simulations", "populated previous revision upgraded to head")
     row = conn.execute(text("""SELECT t.amount_minor, o.published_at FROM transactions t
                             JOIN events e ON e.transaction_id=t.id JOIN outbox o USING(event_id)
                             WHERE t.id=:tx AND e.event_id=:event"""), {**p, "event": event}).one()
@@ -60,7 +60,7 @@ def check_upgrade(conn):
 
 
 def check_storage(conn):
-    require(conn.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one() == "0003_delivery",
+    require(conn.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one() == "0004_simulations",
             "expected migration head")
     p = receipt(conn)
     reject(conn, "23505", RECEIPT, {**p, "tx": uuid4()}, "uq_account_sequence")

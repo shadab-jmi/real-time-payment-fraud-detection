@@ -38,3 +38,10 @@ AGENTS.md
 *.bak
 *.dump
 coverage/
+
+# Local development and browser test output
+apps/web/public/
+playwright-report/
+test-results/
+.envrc
+*.tsbuildinfo

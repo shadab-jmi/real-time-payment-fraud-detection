@@ -71,14 +71,21 @@ def login(data: Login,request: Request,response: Response):
     return {**u,"csrf":digest("csrf/"+token)}
 
 
-def user(request: Request):
+def session_user(request: Request):
     token=request.cookies.get("session","")
+    if not token:
+        return None
     with engine.connect() as c:
         u=query(c,"""SELECT u.id,u.username,u.role FROM sessions s JOIN users u ON u.id=s.user_id
             WHERE token_hash=:h AND expires_at>now() AND NOT disabled""",h=digest(token)).mappings().one_or_none()
+    return {**u,"csrf":digest("csrf/"+token)} if u else None
+
+
+def user(request: Request):
+    u = session_user(request)
     if not u:
         raise HTTPException(401,"Sign in to continue")
-    return {**u,"csrf":digest("csrf/"+token)}
+    return u
 
 
 def detail_reader(request: Request, credentials: HTTPBasicCredentials|None=Depends(basic)):

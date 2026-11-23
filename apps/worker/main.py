@@ -169,6 +169,7 @@ def run():
         paused.clear()
     consumer.subscribe([INPUT],on_revoke=revoke)
     last_probe = 0
+    metadata_failure_since = None
     while True:
         now = time.monotonic()
         for part, at in list(paused.items()):
@@ -181,9 +182,15 @@ def run():
                 consumer.list_topics(INPUT,timeout=3)
             except KafkaException:
                 logging.warning("Broker metadata unavailable")
-                if msg is None or msg.error():
-                    continue
-                raise
+                if metadata_failure_since is None:
+                    metadata_failure_since = now
+                # Recreate a stalled Kafka client through the existing restart policy.
+                # A fetched record is replayed from the last durable offset.
+                if now - metadata_failure_since >= 30 or (msg is not None and not msg.error()):
+                    raise
+                last_probe = now
+                continue
+            metadata_failure_since = None
             with engine.connect() as conn:
                 query(conn,"SELECT 1")
             Path("/tmp/ready").touch()

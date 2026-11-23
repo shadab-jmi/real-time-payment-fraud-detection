@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { api, Failure, User, Run, Tx, Case, Page, Summary } from "./api";
+import { ModelEvidence, percent } from "./ModelEvidence";
 import "./style.css";
 
 const [section = "overview", id] = location.pathname.split("/").filter(Boolean);
@@ -107,8 +108,9 @@ function Login({ done }: { done: (u: User) => void }) {
           />
         </label>
         <button>Sign in</button>
-        <p role="alert">{error}</p>
+        {error && <p role="alert">{error}</p>}
       </form>
+      <a className="login-demo" href="/simulation">Try the payment simulator</a>
     </main>
   );
 }
@@ -347,8 +349,6 @@ function FullId({ value }: { value: string }) {
   );
 }
 function Evidence({ t }: { t: Tx }) {
-  const vals = t.contributions || [],
-    max = Math.max(0.001, ...vals.map((v) => Math.abs(v.signed_value)));
   return (
     <section className="panel">
       <h2>Payment evidence</h2>
@@ -363,49 +363,8 @@ function Evidence({ t }: { t: Tx }) {
         <dt>Decision</dt>
         <dd>{pill(t.action || t.state)}</dd>
       </dl>
-      {t.score !== null && (
-        <>
-          <h3>
-            Model score <strong>{t.score.toFixed(4)}</strong>
-          </h3>
-          <p className="sub">
-            Review ≥ {t.review_threshold.toFixed(4)} · Block ≥{" "}
-            {t.block_threshold.toFixed(4)}
-          </p>
-          <details>
-            <summary>Model explanation</summary>
-            <p>{t.model_version}</p>
-            <p>
-              Bias {t.bias.toFixed(4)} · Raw margin {t.raw_margin.toFixed(4)}{" "}
-              log-odds
-            </p>
-            {[...vals]
-              .sort(
-                (a, b) => Math.abs(b.signed_value) - Math.abs(a.signed_value),
-              )
-              .map((v) => (
-                <div className="factor" key={v.feature_name}>
-                  <span>
-                    {v.feature_name} · {Number(v.feature_value.toFixed(3))}{" "}
-                    {t.manifest?.find((f) => f.name === v.feature_name)?.unit}
-                  </span>
-                  <div className="scale">
-                    <i
-                      style={{
-                        width: (50 * Math.abs(v.signed_value)) / max + "%",
-                        ...(v.signed_value < 0
-                          ? { right: "50%", background: "#546d80" }
-                          : { left: "50%" }),
-                      }}
-                    />
-                  </div>
-                  <code>{v.signed_value.toFixed(3)}</code>
-                </div>
-              ))}
-          </details>
-        </>
-      )}
-      {t.case_id && section !== "cases" && (
+      <ModelEvidence t={t} />
+      {t.case_id && section !== "simulation" && section !== "cases" && (
         <a href={href("cases/" + t.case_id)}>Open linked case →</a>
       )}
     </section>
@@ -609,13 +568,13 @@ function Workspace({ u, logout }: { u: User; logout: () => void }) {
       <aside>
         <Brand />
         <nav aria-label="Workspace">
-          {["overview", "transactions", "cases"].map((v, i) => (
+          {["overview", "transactions", "cases", "simulation"].map((v, i) => (
             <a
               key={v}
               aria-current={section === v ? "page" : undefined}
               href={"/" + v}
             >
-              <b aria-hidden="true">{["▦", "⇄", "▤"][i]}</b>
+              <b aria-hidden="true">{["▦", "⇄", "▤", "▷"][i]}</b>
               {v}
             </a>
           ))}
@@ -767,6 +726,61 @@ function Workspace({ u, logout }: { u: User; logout: () => void }) {
 function opts(...v: string[]): [string, string][] {
   return v.map((s) => [s, s]);
 }
+type SimulationEntry = {id:string; scenario:string; status:string};
+type SimulationState = SimulationEntry & {
+  started:string; ended:string|null; target:number; rate:number;
+  generated:number; processed:number; approved:number; reviewed:number; blocked:number; items:Tx[];
+};
+function Simulation({user}:{user:User|null}) {
+  const [scenario,setScenario]=useState("showcase"), [count,setCount]=useState(20), [rate,setRate]=useState(2);
+  const [busy,setBusy]=useState(false), [message,setMessage]=useState("");
+  const analyst = user?.role === "analyst";
+  const maxRate = analyst ? 200 : 10;
+  const maxCount = analyst ? Math.min(720000, Math.max(1,rate) * 3600) : 200;
+  const selected=params.get("run_id");
+  const feed=useFeed(async()=>{
+    const history=await api<SimulationEntry[]>("simulations");
+    const run=selected || history[0]?.id;
+    const state=run ? await api<SimulationState>("simulations/"+run) : null;
+    const payment=id && run ? await api<Tx>("simulations/"+run+"/transactions/"+id) : null;
+    return {history,state,payment};
+  },location.href);
+  const state=feed.data?.state;
+  const active=feed.data?.history.find(r=>r.status==="Running");
+  async function control(stop:boolean) {
+    if (stop && state?.status !== "Running") return;
+    setBusy(true); setMessage("");
+    try {
+      const result=await api<{id:string}>(stop ? "simulations/"+state?.id+"/stop" : "simulations","POST",
+        stop ? undefined : {scenario,count,rate});
+      location.assign("/simulation?run_id="+result.id);
+    } catch(e) {setMessage((e as Error).message); setBusy(false); feed.refresh();}
+  }
+  return <div className="shell"><aside><Brand/><nav aria-label="Workspace">
+    {user && ["overview","transactions","cases"].map(s=><a key={s} href={"/"+s}>{s}</a>)}
+    <a aria-current="page" href="/simulation">Simulation</a>
+    {!user && <a href="/">Sign in</a>}
+  </nav></aside><main><header><div><p className="eyebrow">Fraud operations</p><h1>Simulation</h1></div></header>
+    <form className="panel sim-controls" onSubmit={e=>{e.preventDefault();void control(false)}}>
+      <label>Scenario<select aria-label="Scenario" aria-describedby="scenario-help" value={scenario} onChange={e=>setScenario(e.target.value)}><option value="mixed">Mixed</option><option value="showcase">Showcase</option></select></label>
+      <label>Payments<input type="number" required min={scenario==="showcase"?7:1} max={maxCount} value={count||""} onChange={e=>setCount(Number(e.target.value))}/></label>
+      <label>Payments per second<input type="number" required min={1} max={maxRate} value={rate||""} onChange={e=>setRate(Number(e.target.value))}/></label>
+      <button disabled={busy || !!active || !feed.data}>Start simulation</button>
+      <button type="button" className="secondary" disabled={busy || state?.status !== "Running"} onClick={()=>control(true)}>Stop simulation</button>
+      {analyst && <p className="scenario-help sub">Analyst limits · Up to 200 payments/s for one hour. At this rate, choose up to {maxCount.toLocaleString()} payments.</p>}
+      <p className="scenario-help sub" id="scenario-help">{scenario==="mixed" ? "Mostly everyday payments, with occasional travel, larger bills, shared devices and bursts of small attempts." : "Starts with six preset payments on one account, then a ₹1,000 web payment to a UK merchant on a new device. Any remaining payments follow the mixed scenario."}</p>
+    </form>
+    {(message || feed.error) && <p role="alert">{message || feed.error}</p>}
+    <div className="filters"><Filter name="run_id" title="Simulation run" options={[["","Latest run"],...(feed.data?.history||[]).map(r=>[r.id,r.scenario+" · "+short(r.id)] as [string,string])]}/></div>
+    <section className="panel"><h2>{state?.status || (feed.data?"Idle":"Loading…")}</h2>
+    {state && <><p>{state.scenario} · {state.rate} payments/s · {Math.max(0,Math.floor(((state.ended?Date.parse(state.ended):Date.now())-Date.parse(state.started))/1000))} s</p>
+    <progress aria-label="Payments processed" value={state.processed} max={state.target}/> {state.processed} / {state.target}</>}</section>
+    {feed.data?.payment && <Evidence t={feed.data.payment}/>}
+    {state && <><div className="metrics sim-metrics">{(["generated","processed","approved","reviewed","blocked"] as const).map(k=><section key={k}><span>{k}</span><strong>{state[k]}</strong></section>)}</div>
+    <section className="panel sim-table"><h2>Live transactions</h2>{state.generated > 200 && <p className="sub">Latest 200 payments · Counters cover the entire run.</p>}<table><thead><tr>{["Transaction ID","Amount","Fraud score","Decision","Received"].map(s=><th key={s}>{s}</th>)}</tr></thead>
+    <tbody>{state.items.map(t=><tr key={t.id}><td><a aria-label={t.id} title={t.id} href={"/simulation/"+t.id+"?run_id="+state.id}>{short(t.id)}…{t.id.slice(-4)}</a></td><td>{money(t.amount_minor)}</td><td>{t.score==null?"—":percent(t.score)}</td><td>{pill(t.action||t.state)}</td><td>{stamp(t.received_at)}</td></tr>)}</tbody></table></section></>}
+    </main></div>;
+}
 function App() {
   const [u, set] = useState<User | null | undefined>(undefined);
   useEffect(() => {
@@ -776,7 +790,7 @@ function App() {
   }, []);
   return u === undefined ? (
     <p>Loading…</p>
-  ) : u ? (
+  ) : section === "simulation" ? <Simulation user={u}/> : u ? (
     <Workspace u={u} logout={() => set(null)} />
   ) : (
     <Login done={set} />

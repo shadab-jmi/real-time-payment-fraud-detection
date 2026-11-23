@@ -376,6 +376,25 @@ article p {
   max-width: 400px;
   margin: 12vh auto;
 }
+.login form > button,
+.login-demo {
+  width: 100%;
+  min-height: 44px;
+}
+.login-demo {
+  display: grid;
+  place-items: center;
+  margin-top: 12px;
+  padding: 8px 16px;
+  border: 1px solid #accbc4;
+  border-radius: 8px;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+}
+.login-demo:hover {
+  background: #edf6f3;
+}
 .login h1 {
   margin: 28px 0 16px;
 }
@@ -475,3 +494,33 @@ article p {
     height: 124px;
   }
 }
+
+.sim-controls {display:flex;align-items:end;flex-wrap:wrap;gap:1rem}
+.sim-controls label {display:grid;gap:.3rem}
+.sim-controls input {width:9rem}
+.sim-table {overflow-x:auto}
+progress {accent-color:#116b60}
+
+.sim-metrics {grid-template-columns:repeat(5,minmax(0,1fr))}
+.sim-metrics section {padding:clamp(10px,1.5vw,24px)}
+.scenario-help {flex-basis:100%;margin:0}
+.model-evidence {border-top:1px solid #d5dfda;margin-top:20px;padding-top:16px}
+.score-heading,.directions,.thresholds {display:flex;align-items:center;justify-content:space-between;gap:8px}
+.score-heading h3 {margin:0;font-size:14px}
+.score-heading strong {font-size:32px;color:#193a46}
+.score-heading .pill {text-transform:capitalize}
+.risk-track {position:relative;display:flex;margin:12px 0;height:8px;border-radius:4px;background:#b1c1d0}
+.risk-track i:first-child {background:#a7d7cc;border-radius:4px 0 0 4px}
+.risk-track i:nth-child(2) {background:#eedcb3}
+.risk-track b {position:absolute;top:-4px;width:4px;height:16px;transform:translateX(-50%);border-radius:3px;background:#172f3a;outline:1px solid white}
+.thresholds {flex-wrap:wrap;color:#48615b;font-size:12px}
+.directions {color:#3469a0;font-size:13px;font-weight:600;margin:16px 0 6px}
+.directions span:last-child {color:#116b60}
+.model-evidence .factor {position:relative;grid-template-columns:minmax(90px,1fr) minmax(50px,1.3fr) 6ch;padding:7px 0;border-bottom:1px solid #edf1f0;font-size:13px}
+.factor code {text-align:right}
+.scale i {border-radius:3px}
+.feature-tip {display:none;position:absolute;bottom:100%;left:0;z-index:2;max-width:340px;padding:10px 12px;border-radius:6px;background:#193a46;color:white;box-shadow:0 3px 10px #16343126}
+.factor:hover .feature-tip,.factor:focus .feature-tip {display:block}
+.technical-table {overflow-x:auto}
+.technical table {font-size:13px}
+@media(max-width:760px){.sim-metrics {grid-template-columns:repeat(2,minmax(0,1fr))}}
