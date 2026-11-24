@@ -63,4 +63,4 @@ To reproduce functional checks, run `docker compose run --rm tools check model` 
 
 **Project 2 — Agentic Fraud Investigation Copilot** will build on the four read-only evidence views for case evidence, entity relationships, analyst notes and decision contributions. The [view schemas](docs/release/view-schemas.json), [synthetic fixture](docs/release/copilot-fixture.json) and [HTTP API contract](docs/openapi-v1.json) provide the integration boundary.
 
-Public hosting remains future work. The current configuration targets localhost and a single API process. A hosted demo needs HTTPS, deployment-specific origin and cookie settings, and trusted proxy handling for client rate limits.
+For EC2, the [production deployment guide](docs/ec2-deployment.md) covers the optional Caddy HTTPS override, origin and cookie settings, private services, and volume-preserving upgrades and rollback. The base Compose configuration continues to target localhost.

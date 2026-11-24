@@ -1,0 +1,15 @@
+{$PUBLIC_HOST} {
+    @backend path /v1/* /health/* /openapi.json
+    handle @backend {
+        request_body {
+            max_size 16KiB
+        }
+        reverse_proxy api:8000 {
+            header_up -X-Real-IP
+            header_up -Forwarded
+        }
+    }
+    handle {
+        reverse_proxy web:8080
+    }
+}

@@ -11,7 +11,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from apps.api.workspace import STATE
-from apps.api.access import digest, origin, session_user
+from apps.api.access import client_ip, digest, origin, secure_cookie, session_user
 from packages.contracts.stream import query
 from packages.db.connect import engine
 from simulator.generate import VERSION, generate
@@ -116,7 +116,7 @@ def start(config:Config, request:Request,response:Response,tasks:BackgroundTasks
         raise HTTPException(422,"Showcase requires at least seven payments")
     token=request.cookies.get(COOKIE) or secrets.token_urlsafe(32)
     owner=digest(token)
-    peer=digest(request.headers.get("x-real-ip",request.client.host))
+    peer=digest(client_ip(request))
     with engine.begin() as c:
         query(c,"SELECT pg_advisory_xact_lock(715306)")
         query(c,"""UPDATE simulations SET status='Failed',ended=now() WHERE status='Running'
@@ -133,7 +133,7 @@ def start(config:Config, request:Request,response:Response,tasks:BackgroundTasks
               id=run,seed=seed,v=VERSION if config.scenario=="mixed" else "showcase-v1")
         query(c,"INSERT INTO simulations(id,owner,peer,scenario,target,rate,status) VALUES(:id,:owner,:peer,:scenario,:target,:rate,'Running')",
               id=run,owner=owner,peer=peer,scenario=config.scenario,target=config.count,rate=config.rate)
-    response.set_cookie(COOKIE,token,httponly=True,samesite="strict",secure=request.url.scheme=="https",max_age=2592000)
+    response.set_cookie(COOKIE,token,httponly=True,samesite="strict",secure=secure_cookie(request),max_age=2592000)
     tasks.add_task(produce,run,seed,config,elevated)
     return {"id":run}
 

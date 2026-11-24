@@ -28,8 +28,21 @@ class Login(BaseModel):
 
 def origin(request):
     port = os.getenv("WEB_PORT","3000")
-    if request.headers.get("origin") not in {f"http://localhost:{port}",f"http://127.0.0.1:{port}"}:
+    public = os.getenv("PUBLIC_ORIGIN")
+    allowed = {public} if public else {f"http://localhost:{port}", f"http://127.0.0.1:{port}"}
+    if request.headers.get("origin") not in allowed:
         raise HTTPException(403,"Invalid request origin")
+
+
+def client_ip(request):
+    # In production Uvicorn resolves X-Forwarded-For only for the Caddy peer.
+    if os.getenv("PUBLIC_ORIGIN"):
+        return request.client.host
+    return request.headers.get("x-real-ip",request.client.host)
+
+
+def secure_cookie(request):
+    return bool(os.getenv("PUBLIC_ORIGIN")) or request.url.scheme == "https"
 
 
 def digest(value):
@@ -38,7 +51,7 @@ def digest(value):
 
 def authenticate(request, username, password):
     now = time.monotonic()
-    keys = [("ip",request.headers.get("x-real-ip",request.client.host)),("user",username)]
+    keys = [("ip",client_ip(request)),("user",username)]
     with lock:
         for key in list(attempts):
             while attempts[key] and attempts[key][0]<now-60:
@@ -67,7 +80,7 @@ def login(data: Login,request: Request,response: Response):
     token=secrets.token_urlsafe(32)
     with engine.begin() as c:
         query(c,"INSERT INTO sessions VALUES(:h,:u,now()+interval '8 hours')",h=digest(token),u=u["id"])
-    response.set_cookie("session",token,httponly=True,samesite="strict",max_age=28800,secure=request.url.scheme=="https")
+    response.set_cookie("session",token,httponly=True,samesite="strict",max_age=28800,secure=secure_cookie(request))
     return {**u,"csrf":digest("csrf/"+token)}
 
 
@@ -116,5 +129,5 @@ def me(u=Depends(user)):
 def logout(request: Request,response: Response,u=Depends(mutation)):
     with engine.begin() as c:
         query(c,"DELETE FROM sessions WHERE token_hash=:h",h=digest(request.cookies["session"]))
-    response.delete_cookie("session")
+    response.delete_cookie("session", secure=secure_cookie(request), httponly=True, samesite="strict")
     return {"signed_out":True}
